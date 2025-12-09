@@ -12,6 +12,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
 } from '@mui/material';
 import type { Post } from '@/types/Post';
 
@@ -55,13 +56,18 @@ export default function AdminPostsPage() {
       ) : posts.length === 0 ? (
         <Typography>Nenhum post cadastrado ainda.</Typography>
       ) : (
-        <List>
+<List>
           {posts.map((post) => (
             <ListItem key={post.id} disableGutters>
-              <ListItemText
-                primary={post.title}
-                secondary={`/posts/${post.slug}`}
-              />
+              <ListItemButton
+                component={Link}
+                href={`/posts/${post.slug}`}
+              >
+                <ListItemText
+                  primary={post.title}
+                  secondary={`/posts/${post.slug}`}
+                />
+              </ListItemButton>
             </ListItem>
           ))}
         </List>
