@@ -1,8 +1,7 @@
 // src/lib/posts.ts
 import fs from "fs";
 import path from "path";
-
-export const POSTS_DIR = path.join(process.cwd(), "src", "content", "posts");
+import { POSTS_DIR } from "@/lib/posts-path";
 
 export type StoredPost = {
   slug: string;
@@ -32,7 +31,6 @@ export function getAllPosts(): StoredPost[] {
     const raw = fs.readFileSync(filePath, "utf-8");
     const slug = filenameToSlug(filename);
 
-    // JSON: espera { title, publishedAt, status, content }
     if (filename.endsWith(".json")) {
       try {
         const data = JSON.parse(raw) as any;
@@ -48,7 +46,6 @@ export function getAllPosts(): StoredPost[] {
       }
     }
 
-    // MD: por enquanto usa o slug como title (depois a gente evolui pra frontmatter)
     return { slug, title: slug, status: "draft", raw };
   });
 }
