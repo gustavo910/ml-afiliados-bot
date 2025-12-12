@@ -1,28 +1,17 @@
-// src/app/api/posts/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import type { CreatePostPayload, Post } from '@/types/Post';
-import { addPost, getAllPosts } from '@/lib/posts-store';
+import fs from 'fs';
+import path from 'path';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
-  const body = (await req.json()) as CreatePostPayload;
+export async function POST(req: Request) {
+  const formData = await req.formData();
+  const files = formData.getAll('files') as File[];
 
-  const newPost: Post = {
-    id: Date.now().toString(),
-    title: body.title,
-    slug: body.slug,
-    metaDescription: body.metaDescription,
-    content: body.content,
-    tags: body.tags,
-    createdAt: new Date().toISOString(),
-    published: true,
-  };
+  const postsDir = path.join(process.cwd(), 'src/content/posts');
 
-  addPost(newPost);
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(path.join(postsDir, file.name), buffer);
+  }
 
-  return NextResponse.json(newPost, { status: 201 });
-}
-
-export async function GET() {
-  const posts = getAllPosts();
-  return NextResponse.json(posts);
+  return NextResponse.json({ success: true });
 }

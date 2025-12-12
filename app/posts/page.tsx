@@ -46,9 +46,10 @@ export default function AdminPostsPage() {
       >
         <Typography variant="h4">Posts</Typography>
 
-        <Button component={Link} href="/admin/posts/novo" variant="contained">
-          Novo post
-        </Button>
+<Button component={Link} href="/posts/novo" variant="contained">
+  Novo post
+</Button>
+
       </Stack>
 
       {loading ? (
