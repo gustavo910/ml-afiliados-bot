@@ -1,0 +1,53 @@
+/* src/app/posts/post.css */
+
+.post {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.post h1 {
+  font-size: clamp(28px, 3vw, 44px);
+  line-height: 1.15;
+  margin: 0 0 16px;
+}
+
+.post .content {
+  font-size: 18px;
+  line-height: 1.75;
+  color: #1a1a1a;
+}
+
+/* imagens sempre responsivas */
+.post img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* caso tenha “hero image” */
+.post .hero {
+  margin: 16px 0 24px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.post .hero img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* opcional: listas mais bonitas */
+.post ul,
+.post ol {
+  padding-left: 20px;
+}
+
+.post blockquote {
+  border-left: 4px solid #ddd;
+  margin: 16px 0;
+  padding: 8px 12px;
+  color: #444;
+}

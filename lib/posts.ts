@@ -33,7 +33,7 @@ export function getAllPosts(): StoredPost[] {
 
     if (filename.endsWith(".json")) {
       try {
-        const data = JSON.parse(raw) as any;
+        const data = JSON.parse(raw) ;
         return {
           slug,
           title: data.title ?? slug,
@@ -63,7 +63,7 @@ export function getPostBySlug(slug: string): StoredPost | null {
     let publishedAt: string | undefined;
 
     try {
-      const data = JSON.parse(raw) as any;
+      const data = JSON.parse(raw);
       title = data.title ?? slug;
       status = (data.status ?? "draft") as StoredPost["status"];
       publishedAt = data.publishedAt;

@@ -13,18 +13,25 @@ export default async function PostPage({ params }: Props) {
   let html = "";
 
   if (post.raw.trim().startsWith("{")) {
-    const data = JSON.parse(post.raw) as any;
+    const data = JSON.parse(post.raw);
     title = data.title ?? title;
     html = data.content ?? "";
   } else {
-    // md/txt: mostra cru por enquanto
     html = `<pre>${post.raw.replaceAll("<", "&lt;")}</pre>`;
   }
 
   return (
-    <main style={{ maxWidth: 800, margin: "0 auto", padding: "2rem" }}>
+    <article className="post">
       <h1>{title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </main>
+
+      {/* se você quiser: data.heroImageUrl, etc. */}
+      {/* {data.heroImageUrl && (
+        <div className="hero">
+          <img src={data.heroImageUrl} alt={data.heroImageAlt ?? title} />
+        </div>
+      )} */}
+
+      <div className="content" dangerouslySetInnerHTML={{ __html: html }} />
+    </article>
   );
 }
