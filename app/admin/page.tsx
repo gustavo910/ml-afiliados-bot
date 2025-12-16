@@ -17,7 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import { actionPublishNext, actionScheduleDrafts } from "./actions";
+import { actionPublishNext, actionScheduleDrafts } from "./posts/actions";
 
 function StatusChip({ status }: { status: "draft" | "scheduled" | "published" }) {
   if (status === "published") return <Chip label="Publicado" color="success" size="small" />;

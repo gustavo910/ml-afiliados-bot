@@ -5,7 +5,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 console.log("[MIDDLEWARE]", pathname);
   // libera tela de login e endpoint de login
-  if (pathname === "/admin/login" || pathname.startsWith("/api/login")) {
+  if (pathname === "/login" || pathname.startsWith("/api/login")) {
     return NextResponse.next();
   }
 
@@ -15,7 +15,7 @@ console.log("[MIDDLEWARE]", pathname);
 
     if (!ok) {
       const url = req.nextUrl.clone();
-      url.pathname = "/admin/login";
+      url.pathname = "/login";
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
     }

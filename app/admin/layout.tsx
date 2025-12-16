@@ -1,3 +1,5 @@
+import AdminHeader from "@/components/admin/AdminHeader";
+
 // app/(admin)/layout.tsx
 export default function AdminLayout({
   children,
@@ -5,5 +7,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   // aqui você pode colocar menu lateral, header, etc.
-  return <>{children}</>;
+  return <>
+   <AdminHeader />
+  {children}</>;
 }
