@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   Box,
@@ -17,8 +17,14 @@ import {
 export default function AdminLoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
+  const params = useParams<{ locale: string }>();
 
-  const next = useMemo(() => sp.get("next") ?? "/admin/posts", [sp]);
+  const country = (params.locale ?? "de").toLowerCase();
+
+  const next = useMemo(
+    () => sp.get("next") ?? `/${country}/admin/posts`,
+    [sp, country]
+  );
 
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
@@ -31,9 +37,10 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch(`/api/login/${country}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
@@ -42,7 +49,6 @@ export default function AdminLoginPage() {
         throw new Error(data?.message ?? "Falha no login");
       }
 
-      // cookie já foi setado pela API (httpOnly)
       router.replace(next);
       router.refresh();
     } catch (err) {
@@ -59,7 +65,7 @@ export default function AdminLoginPage() {
           <Stack spacing={2}>
             <Box>
               <Typography variant="h4" fontWeight={800}>
-                Área Administrativa
+                Área Administrativa ({country.toUpperCase()})
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Entre com seu login e senha para continuar.
