@@ -29,7 +29,7 @@ export default function UploadPostsPage() {
       setFiles([]);
       // Atualiza as páginas server que listam posts
       router.refresh();
-      router.push('/admin/posts');
+      router.push('/');
     } finally {
       setLoading(false);
     }

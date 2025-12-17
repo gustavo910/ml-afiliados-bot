@@ -1,61 +1,32 @@
-import { Container, Typography } from "@mui/material";
+// src/app/page.tsx
+import { Container, Box } from "@mui/material";
 import { Seo } from "@/components/Seo";
-import { getAllPosts } from "@/lib/posts";
-import { PostsCardsGrid, type PostCardItem } from "@/components/PostsCardsGrid";
-
-function stripHtml(html: string) {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
+import { getPublishedPostsDue } from "@/lib/posts";
+import PostsIndexClient from "@/components/PostsIndexClient";
 
 export default function HomePage() {
-  const cards: PostCardItem[] = getAllPosts()
-    .filter((p) => p.status === "published")
-    .map((p) => {
-      let excerpt = "";
-      let heroImageUrl: string | undefined;
-
-      if (p.raw.trim().startsWith("{")) {
-        const data = JSON.parse(p.raw) as {
-          content?: string;
-          heroImageUrl?: string;
-        };
-
-        heroImageUrl = data.heroImageUrl;
-        excerpt = stripHtml(data.content ?? "").slice(0, 180);
-      } else {
-        excerpt = p.raw.slice(0, 180);
-      }
-
-      return {
-        slug: p.slug,
-        title: p.title,
-        excerpt: excerpt ? `${excerpt}…` : "",
-        heroImageUrl,
-      };
-    });
+  const posts = getPublishedPostsDue();
 
   return (
     <>
       <Seo
-        title="Blog de Afiliados – Início"
-        description="Blog em Next.js otimizado para SEO com foco em produtos de afiliados."
+        title="Alle Beiträge | Ratgeber & Vergleiche"
+        description="Aktuelle Ratgeber, Vergleiche und Checklisten für Deutschland – klar, unabhängig und praxisnah."
         canonical="https://www.exemplo.com/"
       />
 
-      <Container sx={{ py: 4 }}>
-        <Typography variant="h3" gutterBottom>
-          Bem-vindo ao blog
-        </Typography>
-        <Typography sx={{ mb: 3 }}>
-          Aqui vamos publicar artigos otimizados para SEO em vários idiomas.
-        </Typography>
-
-        {cards.length === 0 ? (
-          <Typography color="text.secondary">Nenhum post publicado ainda.</Typography>
-        ) : (
-          <PostsCardsGrid posts={cards} />
-        )}
-      </Container>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "#F6F7F9",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Container maxWidth="md" sx={{ py: { xs: 4, sm: 6 } }}>
+          <PostsIndexClient posts={posts} pageSize={8} />
+        </Container>
+      </Box>
     </>
   );
 }

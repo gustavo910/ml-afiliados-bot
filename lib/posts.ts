@@ -14,13 +14,20 @@ export type StoredPost = {
   raw: string;
 };
 
-type JsonPostFile = {
+export type JsonPostFile = {
   title?: string;
   status?: PostStatus;
   publishedAt?: string; // YYYY-MM-DD
-  content?: string;     // HTML
+  content?: string; // HTML
   heroImageUrl?: string;
   heroImageAlt?: string;
+
+  // imagem do card (opcional; se não tiver, usa hero)
+  cardImageUrl?: string;
+  cardImageAlt?: string;
+
+  // resumo manual (se não tiver, geramos do content)
+  excerpt?: string;
 };
 
 function ensureDir() {
@@ -127,10 +134,7 @@ export function publishNextDuePost() {
 
   const posts = getAllPosts()
     .filter((p) => p.raw.trim().startsWith("{")) // só JSON
-    .map((p) => ({
-      ...p,
-      publishedAt: p.publishedAt ?? undefined,
-    }));
+    .map((p) => ({ ...p, publishedAt: p.publishedAt ?? undefined }));
 
   const alreadyPublishedToday = posts.some(
     (p) => p.status === "published" && p.publishedAt === today
@@ -143,14 +147,11 @@ export function publishNextDuePost() {
     .filter((p) => p.status === "scheduled" && p.publishedAt && p.publishedAt <= today)
     .sort((a, b) => (a.publishedAt!).localeCompare(b.publishedAt!));
 
-  if (due.length === 0) {
-    return { action: "none" as const };
-  }
+  if (due.length === 0) return { action: "none" as const };
 
   const toPublish = due[0];
   updateJsonPost(toPublish.slug, { status: "published", publishedAt: today });
 
-  // empurra os atrasados restantes para amanhã+ (1/dia)
   let nextDate = addDays(today, 1);
   for (const p of due.slice(1)) {
     updateJsonPost(p.slug, { status: "scheduled", publishedAt: nextDate });
@@ -163,4 +164,68 @@ export function publishNextDuePost() {
     publishedAt: today,
     shifted: due.length - 1,
   };
+}
+
+/* ------------------ HOME: cards publicados ------------------ */
+
+export type PublishedCardPost = {
+  slug: string;
+  title: string;
+  publishedAt?: string;
+  excerpt?: string;
+  heroImageUrl?: string;
+  heroImageAlt?: string;
+  cardImageUrl?: string;
+  cardImageAlt?: string;
+};
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/?[^>]+(>|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function makeExcerptFromHtml(html: string, maxLen = 180) {
+  const text = stripHtml(html);
+  if (!text) return "";
+  return text.length > maxLen ? text.slice(0, maxLen).trim() : text;
+}
+
+export function getPublishedPostsDue(): PublishedCardPost[] {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const all = getAllPosts();
+
+  const published = all
+    .filter((p) => p.raw.trim().startsWith("{"))
+    .map((p) => {
+      const data = safeParseJson(p.raw);
+      if (!data) return null;
+
+      const status = data.status ?? "draft";
+      const publishedAt = data.publishedAt;
+
+      if (status !== "published") return null;
+      if (publishedAt && publishedAt > today) return null;
+
+      const title = data.title ?? p.title ?? p.slug;
+
+      return {
+        slug: p.slug,
+        title,
+        publishedAt,
+        excerpt: data.excerpt ?? makeExcerptFromHtml(data.content ?? "", 180),
+        heroImageUrl: data.heroImageUrl,
+        heroImageAlt: data.heroImageAlt,
+        cardImageUrl: data.cardImageUrl,
+        cardImageAlt: data.cardImageAlt,
+      } satisfies PublishedCardPost;
+    })
+    .filter(Boolean) as PublishedCardPost[];
+
+  published.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+  return published;
 }
