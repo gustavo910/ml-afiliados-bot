@@ -1,29 +1,43 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import ThemeRegistry from "./ThemeRegistry";
 import Script from "next/script";
+import ThemeRegistry from "./ThemeRegistry";
+import Footer from "@/components/Footer";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.seudominio.com";
 
 export const metadata: Metadata = {
-  title: "Meu Blog SEO",
-  description: "Blog em Next.js",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Meu Blog SEO",
+    template: "%s | Meu Blog SEO",
+  },
+  description: "Blog em Next.js com reviews e guias práticos.",
+  openGraph: {
+    type: "website",
+    siteName: "Meu Blog SEO",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-            <head>
-        {/* Script da CMP (vem do fornecedor) */}
+      <body>
+        {/* CMP (Consent Management Platform) - precisa vir antes do AdSense */}
         <Script
           id="cmp-loader"
           src="https://SEU_FORNECEDOR_CMP.com/seu-script.js"
           strategy="beforeInteractive"
         />
 
-        {/* AdSense (pode ficar aqui também) */}
+        {/* AdSense */}
         <Script
           id="adsense"
           async
@@ -31,9 +45,9 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-      </head>
-      <body>
+
         <ThemeRegistry>{children}</ThemeRegistry>
+        <Footer />
       </body>
     </html>
   );
