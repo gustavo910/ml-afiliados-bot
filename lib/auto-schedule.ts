@@ -1,79 +1,123 @@
-// src/lib/auto-schedule.ts
 import fs from "fs";
-import { getAllPosts, updateJsonPost } from "./posts";
-import { getPostsDirForWrite } from "./posts-path";
-import type { Country } from "@/lib/countries";
+import path from "path";
+import { POSTS_DIR } from "@/lib/posts-path";
 
-function ensureDir(country: Country) {
-  const dir = getPostsDirForWrite(country);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+type PostStatus = "draft" | "scheduled" | "published";
+
+type JsonPost = {
+  title?: string;
+  status?: PostStatus;
+  publishedAt?: string; // "YYYY-MM-DD"
+  createdAt?: string;
+  content?: unknown;
+  [key: string]: unknown;
+};
+
+function ensureDir() {
+  if (!fs.existsSync(POSTS_DIR)) fs.mkdirSync(POSTS_DIR, { recursive: true });
+}
+
+function isJsonFile(name: string) {
+  return name.toLowerCase().endsWith(".json");
+}
+
+function toSlug(filename: string) {
+  return filename.replace(/\.json$/i, "");
 }
 
 function isValidYmd(s?: string) {
   return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
-function addDaysYmd(base: string, days: number) {
-  const [y, m, d] = base.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  return dt.toISOString().slice(0, 10);
+function parseYmd(s: string) {
+  // cria Date no UTC pra evitar "voltar um dia" por timezone
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
 }
 
-function todayYmdUTC() {
-  return new Date().toISOString().slice(0, 10);
+function formatYmdUTC(date: Date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-/** Agenda TODOS os drafts (sem publishedAt) como scheduled 1/dia */
-export function scheduleDraftsOnePerDay(country: Country, startDate?: string) {
-  ensureDir(country);
+function addDaysUTC(date: Date, days: number) {
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
 
-  const posts = getAllPosts(country);
+function tomorrowUTC() {
+  const now = new Date();
+  const t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return addDaysUTC(t, 1);
+}
 
-  let maxDate: string | null = null;
-  for (const p of posts) {
-    if ((p.status === "scheduled" || p.status === "published") && isValidYmd(p.publishedAt)) {
-      if (!maxDate || p.publishedAt! > maxDate) maxDate = p.publishedAt!;
+type DraftFile = {
+  filename: string;
+  filePath: string;
+  data: JsonPost;
+};
+
+export function autoScheduleDraftsIfNeeded() {
+  ensureDir();
+
+  const files = fs.readdirSync(POSTS_DIR).filter(isJsonFile);
+
+  let maxScheduledOrPublished: Date | null = null;
+  const draftsToSchedule: DraftFile[] = [];
+
+  for (const filename of files) {
+    const filePath = path.join(POSTS_DIR, filename);
+    const raw = fs.readFileSync(filePath, "utf-8");
+
+    let data: JsonPost;
+    try {
+      data = JSON.parse(raw) as JsonPost;
+    } catch {
+      // se JSON inválido, ignora (ou você pode lançar erro)
+      continue;
+    }
+
+    const status = (data.status ?? "draft") as PostStatus;
+
+    // Já tem data? considera pra "última data ocupada"
+    if ((status === "scheduled" || status === "published") && isValidYmd(data.publishedAt)) {
+      const dt = parseYmd(data.publishedAt!);
+      if (!maxScheduledOrPublished || dt > maxScheduledOrPublished) {
+        maxScheduledOrPublished = dt;
+      }
+      continue;
+    }
+
+    // rascunho sem publishedAt => entra na fila pra agendar
+    const needsSchedule = status === "draft" && !isValidYmd(data.publishedAt);
+    if (needsSchedule) {
+      draftsToSchedule.push({ filename, filePath, data });
     }
   }
 
-  const base =
-    startDate && isValidYmd(startDate)
-      ? startDate
-      : maxDate
-        ? addDaysYmd(maxDate, 1)
-        : addDaysYmd(todayYmdUTC(), 1);
+  if (draftsToSchedule.length === 0) {
+    return { scheduled: 0 };
+  }
 
-  const drafts = posts
-    .filter((p) => p.raw.trim().startsWith("{"))
-    .filter((p) => p.status === "draft" && !isValidYmd(p.publishedAt))
-    .sort((a, b) => a.slug.localeCompare(b.slug));
-
-  drafts.forEach((p, idx) => {
-    updateJsonPost(p.slug, { status: "scheduled", publishedAt: addDaysYmd(base, idx) }, country);
+  // Ordena pra ficar previsível (pode trocar pra createdAt, mtime, etc)
+  draftsToSchedule.sort((a, b) => {
+    const aSlug = toSlug(a.filename);
+    const bSlug = toSlug(b.filename);
+    return aSlug.localeCompare(bSlug);
   });
 
-  return { scheduled: drafts.length, startDate: base };
-}
+  const startDate = maxScheduledOrPublished ? addDaysUTC(maxScheduledOrPublished, 1) : tomorrowUTC();
 
-/** Publica 1 por dia (scheduled <= hoje) */
-export function publishNextScheduled(country: Country) {
-  ensureDir(country);
-  const today = todayYmdUTC();
+  draftsToSchedule.forEach((item, idx) => {
+    const publishDate = addDaysUTC(startDate, idx);
+    item.data.status = "scheduled";
+    item.data.publishedAt = formatYmdUTC(publishDate);
 
-  const posts = getAllPosts(country).filter((p) => p.raw.trim().startsWith("{"));
+    fs.writeFileSync(item.filePath, JSON.stringify(item.data, null, 2), "utf-8");
+  });
 
-  const already = posts.some((p) => p.status === "published" && p.publishedAt === today);
-  if (already) return { published: false, reason: "already_published_today" as const };
-
-  const due = posts
-    .filter((p) => p.status === "scheduled" && isValidYmd(p.publishedAt) && p.publishedAt! <= today)
-    .sort((a, b) => (a.publishedAt!).localeCompare(b.publishedAt!));
-
-  if (due.length === 0) return { published: false, reason: "none_due" as const };
-
-  const next = due[0];
-  updateJsonPost(next.slug, { status: "published", publishedAt: today }, country);
-
-  return { published: true, slug: next.slug, publishedAt: today };
+  return { scheduled: draftsToSchedule.length };
 }

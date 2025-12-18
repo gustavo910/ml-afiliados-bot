@@ -1,6 +1,6 @@
+// src/app/(admin)/posts/page.tsx
 import Link from "next/link";
 import { getAllPosts } from "@/lib/posts";
-import { normalizeCountry } from "@/lib/countries";
 import {
   Box,
   Button,
@@ -16,9 +16,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+
 import { actionPublishNext, actionScheduleDrafts } from "./posts/actions";
-
-
 
 function StatusChip({ status }: { status: "draft" | "scheduled" | "published" }) {
   if (status === "published") return <Chip label="Publicado" color="success" size="small" />;
@@ -26,10 +25,10 @@ function StatusChip({ status }: { status: "draft" | "scheduled" | "published" })
   return <Chip label="Rascunho" variant="outlined" size="small" />;
 }
 
-export default function AdminPostsPage({ params }: { params: { locale: string } }) {
-  const country = normalizeCountry(params.locale);
-  const posts = getAllPosts(country);
+export default function AdminPostsPage() {
+  const posts = getAllPosts();
 
+  // posição na fila = apenas scheduled, ordenado por publishedAt
   const queue = posts
     .filter((p) => p.status === "scheduled" && p.publishedAt)
     .sort((a, b) => (a.publishedAt ?? "").localeCompare(b.publishedAt ?? ""));
@@ -45,9 +44,8 @@ export default function AdminPostsPage({ params }: { params: { locale: string } 
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={2} mb={2}>
         <Box>
           <Typography variant="h4" fontWeight={800}>
-            Posts ({country.toUpperCase()})
+            Posts
           </Typography>
-
           <Stack direction="row" gap={1} mt={1} flexWrap="wrap">
             <Chip label={`Total: ${total}`} size="small" />
             <Chip label={`Rascunhos: ${drafts}`} size="small" variant="outlined" />
@@ -57,14 +55,11 @@ export default function AdminPostsPage({ params }: { params: { locale: string } 
         </Box>
 
         <Stack direction={{ xs: "column", sm: "row" }} gap={1} alignItems={{ sm: "center" }}>
-          {/* ✅ link com país */}
-          <Link href={`/${country}/admin/posts/upload`} style={{ textDecoration: "none" }}>
+          <Link href="/admin/posts/upload" style={{ textDecoration: "none" }}>
             <Button variant="contained">Upload de posts</Button>
           </Link>
 
-          {/* ✅ action recebe country */}
           <form action={actionPublishNext}>
-            <input type="hidden" name="country" value={country} />
             <Button type="submit" variant="outlined">
               Publicar próximo da fila
             </Button>
@@ -79,8 +74,6 @@ export default function AdminPostsPage({ params }: { params: { locale: string } 
 
         <Stack direction={{ xs: "column", sm: "row" }} gap={1} alignItems={{ sm: "center" }}>
           <form action={actionScheduleDrafts} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input type="hidden" name="country" value={country} />
-
             <TextField
               name="startDate"
               label="Data inicial"
@@ -89,15 +82,13 @@ export default function AdminPostsPage({ params }: { params: { locale: string } 
               InputLabelProps={{ shrink: true }}
               helperText="Se vazio, começa amanhã"
             />
-
             <Button type="submit" variant="contained">
               Agendar rascunhos (1/dia)
             </Button>
           </form>
 
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            Isso grava <b>status</b> e <b>publishedAt</b> nos arquivos JSON em{" "}
-            <code>content/{country}/posts</code>.
+            Isso grava <b>status</b> e <b>publishedAt</b> nos arquivos JSON em <code>src/content/posts</code>.
           </Typography>
         </Stack>
       </Paper>
@@ -123,26 +114,40 @@ export default function AdminPostsPage({ params }: { params: { locale: string } 
           </TableHead>
 
           <TableBody>
-            {posts.map((post) => (
+            {posts.map((post, idx) => (
               <TableRow
                 key={post.slug}
                 hover
-                sx={{ "&:nth-of-type(odd)": { backgroundColor: "action.hover" } }}
+                sx={{
+                  "&:nth-of-type(odd)": { backgroundColor: "action.hover" },
+                }}
               >
-                <TableCell sx={{ width: 70 }}>{queueIndex.get(post.slug) ?? "-"}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{post.title}</TableCell>
-                <TableCell sx={{ fontFamily: "monospace" }}>{post.slug}</TableCell>
+                <TableCell sx={{ width: 70 }}>
+                  {queueIndex.get(post.slug) ?? "-"}
+                </TableCell>
+
+                <TableCell sx={{ fontWeight: 700 }}>
+                  {post.title}
+                </TableCell>
+
+                <TableCell sx={{ fontFamily: "monospace" }}>
+                  {post.slug}
+                </TableCell>
+
                 <TableCell>
                   <StatusChip status={post.status} />
                 </TableCell>
-                <TableCell>{post.publishedAt ?? "-"}</TableCell>
+
+                <TableCell>
+                  {post.publishedAt ?? "-"}
+                </TableCell>
               </TableRow>
             ))}
 
             {posts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} sx={{ py: 6, textAlign: "center", color: "text.secondary" }}>
-                  Nenhum post encontrado em <code>content/{country}/posts</code>
+                  Nenhum post encontrado em <code>src/content/posts</code>
                 </TableCell>
               </TableRow>
             )}
